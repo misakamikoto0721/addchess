@@ -7,6 +7,11 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    fs: {
+      allow: [path.resolve(dir, "../..")],
+    },
+  },
   resolve: {
     alias: {
       "@addchess/core": path.resolve(dir, "../core/src/index.ts"),

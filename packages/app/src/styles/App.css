@@ -221,6 +221,58 @@ body {
   font-size: 0.95rem;
 }
 
+.app-rules-link {
+  color: #88c0d0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-rules-link:hover {
+  color: #8fbcbb;
+}
+
+.rules-doc {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #3b4252;
+}
+
+.rules-doc h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+
+.rules-doc-note {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: #8b95a8;
+  line-height: 1.4;
+}
+
+.rules-doc-note code {
+  font-size: 0.88em;
+  background: #252933;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.rules-md {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  max-height: min(70vh, 36rem);
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #d8dee9;
+  background: #252933;
+  border: 1px solid #3b4252;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .board-wrap {
   display: flex;
   flex-direction: column;

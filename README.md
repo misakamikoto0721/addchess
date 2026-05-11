@@ -1,6 +1,6 @@
 # AddChess（加子棋）
 
-浏览器中的**自定义规则国际象棋**项目：包含标准走子引擎与当前实现的「加子棋」变体（黑方备战区、白方指定兵种加子、连将限制、空降王等）。界面使用 React + Vite；规则与棋盘逻辑在独立 npm 包 `@addchess/core` 中，便于测试与复用。
+浏览器中的**自定义规则国际象棋**项目：**玩法与规则全文见 [《加子棋规则说明》](./docs/RULES.md)**。界面使用 React + Vite；规则与棋盘逻辑在独立 npm 包 `@addchess/core` 中，便于测试与复用。
 
 ## 快速开始
 
@@ -65,7 +65,8 @@ npm run dev
 
 ## 规则与实现对应关系
 
-变体规则由你与助手逐步约定；当前实现集中在 `packages/core/src/variant/`。若你要改规则，优先改该目录下的模块，再在 `packages/app` 中调整交互。
+- **给玩家 / 读者看的规则说明**：[docs/RULES.md](./docs/RULES.md)  
+- **引擎实现**：当前变体逻辑集中在 `packages/core/src/variant/`。若你要改规则，优先改该目录下的模块并同步更新 `docs/RULES.md`，再在 `packages/app` 中调整交互。
 
 ## 上传到 GitHub 时注意
 
