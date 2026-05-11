@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@addchess/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

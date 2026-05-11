@@ -1,0 +1,13 @@
+{
+  "name": "addchess",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:core": "npm run build -w @addchess/core",
+    "build": "npm run build -w @addchess/app",
+    "dev": "npm run dev -w @addchess/app",
+    "test": "npm run test -w @addchess/core"
+  }
+}
