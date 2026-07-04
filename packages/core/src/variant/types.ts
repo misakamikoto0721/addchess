@@ -1,4 +1,4 @@
-import type { BoardState, ChessMeta, PieceKind, Side, Square } from "../model/types.js";
+import type { BoardState, ChessMeta, Side } from "../model/types.js";
 
 export type VariantPhase = "place_black_king" | "play";
 
