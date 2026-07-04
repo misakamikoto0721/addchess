@@ -107,7 +107,7 @@ flowchart LR
 | 产物 | 部署到哪 | 命令示例 |
 |------|----------|----------|
 | `packages/app/dist/` | GitHub Pages / Vercel / Nginx 静态目录 | `npm run build` |
-| `packages/server` 编译结果 | Railway / 云主机 Node 进程 | `npm run build:server` → `npm run start -w @addchess/server` |
+| `packages/server` 编译结果 | Railway / **国内 VPS** / 云主机 Node 进程 | 见 [docs/DEPLOY-SERVER-CN.md](./docs/DEPLOY-SERVER-CN.md) |
 
 - **前端**：静态文件，**不能**单独实现 WebSocket 房间。  
 - **后端**：必须 **24/7 在线**（或至少对局期间在线），别人才能用房间号联机。

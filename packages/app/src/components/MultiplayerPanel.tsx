@@ -21,6 +21,8 @@ function pieceKindsLabel(k: PieceKind): string {
 
 export function MultiplayerPanel() {
   const mp = useMultiplayer();
+  const isLocalDev =
+    mp.wsUrl.includes("localhost") || mp.wsUrl.includes("127.0.0.1");
 
   if (mp.screen === "game" && mp.gameController) {
     const g = mp.gameController;
@@ -115,7 +117,14 @@ export function MultiplayerPanel() {
       <p className="lobby-hint">
         联机服务器：<code>{mp.wsUrl}</code>
         <br />
-        请先在本机另开终端运行 <code>npm run dev:server</code>，再用两个浏览器窗口测试。
+        {isLocalDev ? (
+          <>
+            请先在本机另开终端运行 <code>npm run dev:server</code>
+            ，再用两个浏览器窗口测试。
+          </>
+        ) : (
+          <>把房间号发给对手；两人到齐后，房主点「开始游戏」。</>
+        )}
       </p>
 
       <div className="lobby-actions">

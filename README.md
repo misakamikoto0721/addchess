@@ -36,6 +36,7 @@ npm run dev
 |------|------|
 | `npm run dev` | 启动**前端**（5173） |
 | `npm run dev:server` | 启动**联机后端**（3000 WebSocket） |
+| `npm run start:server` | 生产模式启动联机后端（VPS 上用 pm2 调用） |
 | `npm run build` | 生产构建**前端**静态站（`packages/app/dist`） |
 | `npm run build:server` | 构建**后端**（`packages/server/dist`） |
 | `npm run build:core` | 构建共享规则包 `@addchess/core`（联机校验时会用到） |

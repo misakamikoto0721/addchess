@@ -4,6 +4,8 @@ import { parseClientMessage } from "@addchess/core";
 import { handleClientMessage, onSocketClose } from "./handler.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+const HOST = process.env.HOST ?? "0.0.0.0";
+const PUBLIC_WS_URL = process.env.PUBLIC_WS_URL?.trim();
 
 const httpServer = createServer((req, res) => {
   const url = req.url ?? "/";
@@ -14,7 +16,11 @@ const httpServer = createServer((req, res) => {
       JSON.stringify({
         ok: true,
         service: "addchess-server",
-        ws: `ws://localhost:${PORT}`,
+        ws:
+          PUBLIC_WS_URL ??
+          (HOST === "0.0.0.0"
+            ? `ws://localhost:${PORT}`
+            : `ws://${HOST}:${PORT}`),
       }),
     );
     return;
@@ -44,8 +50,9 @@ wss.on("connection", (ws) => {
   ws.on("close", () => onSocketClose(ws));
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`[@addchess/server] http://localhost:${PORT}`);
-  console.log(`  WebSocket ws://localhost:${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+  console.log(`[@addchess/server] http://${HOST}:${PORT}`);
+  console.log(`  WebSocket ws://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
+  if (PUBLIC_WS_URL) console.log(`  Public WS ${PUBLIC_WS_URL}`);
   console.log(`  GET /health`);
 });
