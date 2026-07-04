@@ -7,7 +7,9 @@
   "scripts": {
     "build:core": "npm run build -w @addchess/core",
     "build": "npm run build -w @addchess/app",
+    "build:server": "npm run build -w @addchess/server",
     "dev": "npm run dev -w @addchess/app",
+    "dev:server": "npm run dev -w @addchess/server",
     "test": "npm run test -w @addchess/core"
   }
 }

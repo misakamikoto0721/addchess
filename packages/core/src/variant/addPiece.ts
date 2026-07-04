@@ -11,6 +11,21 @@ export function addCategoryForKind(kind: PieceKind): AddCategory {
   return "heavy";
 }
 
+/** 备战区里「类别」仍有种棋可加的集合（兵 / 轻子 / 重子）。 */
+export function reserveCategoriesWithStock(v: VariantSnapshot): AddCategory[] {
+  const out: AddCategory[] = [];
+  if (v.reserve.pawn > 0) out.push("pawn");
+  if (v.reserve.knight > 0 || v.reserve.bishop > 0) out.push("light");
+  if (v.reserve.rook > 0 || v.reserve.queen > 0) out.push("heavy");
+  return out;
+}
+
+/** 连续指定限制仅在「至少两类仍有库存」时生效，否则白方只能反复指定剩下一类，不得封死加子。 */
+function streakWouldBlock(v: VariantSnapshot, cat: AddCategory): boolean {
+  if (reserveCategoriesWithStock(v).length < 2) return false;
+  return wouldViolateWhiteStreak(v.whiteAddStreak, cat);
+}
+
 export function kindsAvailableInCategory(
   v: VariantSnapshot,
   cat: AddCategory,
@@ -35,24 +50,15 @@ export function kindsAvailableInCategory(
 
 export function whiteLegalAddCategories(v: VariantSnapshot): AddCategory[] {
   const out: AddCategory[] = [];
-  if (
-    v.reserve.pawn > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "pawn")
-  ) {
+  if (v.reserve.pawn > 0 && !streakWouldBlock(v, "pawn")) {
     out.push("pawn");
   }
   const lightAvail = v.reserve.knight > 0 || v.reserve.bishop > 0;
-  if (
-    lightAvail &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "light")
-  ) {
+  if (lightAvail && !streakWouldBlock(v, "light")) {
     out.push("light");
   }
   const heavyAvail = v.reserve.rook > 0 || v.reserve.queen > 0;
-  if (
-    heavyAvail &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "heavy")
-  ) {
+  if (heavyAvail && !streakWouldBlock(v, "heavy")) {
     out.push("heavy");
   }
   return out;
@@ -61,34 +67,19 @@ export function whiteLegalAddCategories(v: VariantSnapshot): AddCategory[] {
 /** 白方可指定的具体兵种（库存够且不计数违规）。 */
 export function whiteLegalPieceKinds(v: VariantSnapshot): PieceKind[] {
   const out: PieceKind[] = [];
-  if (
-    v.reserve.pawn > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "pawn")
-  ) {
+  if (v.reserve.pawn > 0 && !streakWouldBlock(v, "pawn")) {
     out.push("pawn");
   }
-  if (
-    v.reserve.knight > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "light")
-  ) {
+  if (v.reserve.knight > 0 && !streakWouldBlock(v, "light")) {
     out.push("knight");
   }
-  if (
-    v.reserve.bishop > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "light")
-  ) {
+  if (v.reserve.bishop > 0 && !streakWouldBlock(v, "light")) {
     out.push("bishop");
   }
-  if (
-    v.reserve.rook > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "heavy")
-  ) {
+  if (v.reserve.rook > 0 && !streakWouldBlock(v, "heavy")) {
     out.push("rook");
   }
-  if (
-    v.reserve.queen > 0 &&
-    !wouldViolateWhiteStreak(v.whiteAddStreak, "heavy")
-  ) {
+  if (v.reserve.queen > 0 && !streakWouldBlock(v, "heavy")) {
     out.push("queen");
   }
   return out;

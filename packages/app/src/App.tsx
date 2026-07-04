@@ -1,7 +1,13 @@
 import { VariantChess } from "./components/VariantChess.js";
+import { MultiplayerPanel } from "./components/MultiplayerPanel.js";
 import { RulesDoc } from "./components/RulesDoc.js";
+import { useState } from "react";
+
+type PlayMode = "local" | "online";
 
 export function App() {
+  const [mode, setMode] = useState<PlayMode>("local");
+
   return (
     <div className="app">
       <header className="app-header">
@@ -13,9 +19,29 @@ export function App() {
           </a>
           。
         </p>
+        <div className="mode-tabs" role="tablist" aria-label="游戏模式">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "local"}
+            className={mode === "local" ? "mode-tab active" : "mode-tab"}
+            onClick={() => setMode("local")}
+          >
+            本地对局
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "online"}
+            className={mode === "online" ? "mode-tab active" : "mode-tab"}
+            onClick={() => setMode("online")}
+          >
+            联机对战
+          </button>
+        </div>
       </header>
       <main>
-        <VariantChess />
+        {mode === "local" ? <VariantChess /> : <MultiplayerPanel />}
         <RulesDoc />
       </main>
     </div>

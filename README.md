@@ -34,20 +34,26 @@ npm run dev
 
 | 命令 | 说明 |
 |------|------|
-| `npm run dev` | 启动前端开发服务器（`packages/app`） |
-| `npm run build` | 生产构建前端（会把 core 源码一并打包进 bundle） |
-| `npm run build:core` | 单独用 tsup 构建 `@addchess/core` 的 `dist/`（发布 npm 时用） |
+| `npm run dev` | 启动**前端**（5173） |
+| `npm run dev:server` | 启动**联机后端**（3000 WebSocket） |
+| `npm run build` | 生产构建**前端**静态站（`packages/app/dist`） |
+| `npm run build:server` | 构建**后端**（`packages/server/dist`） |
+| `npm run build:core` | 构建共享规则包 `@addchess/core`（联机校验时会用到） |
 | `npm test` | 运行 `@addchess/core` 的 Vitest 单元测试 |
-| `npm run preview -w @addchess/app` | 本地预览构建产物 |
+| `npm run preview -w @addchess/app` | 本地预览前端构建产物 |
 
 ## 仓库结构（鸟瞰）
 
-本项目是 **npm workspaces 单体仓库**：
+本项目是 **npm workspaces 单体仓库**，拆成 **前端 / 后端 / 共享规则** 三包：
 
-- **`packages/core`** → 包名 `@addchess/core`：棋盘模型、标准棋走子/将军、变体状态与合法着法。
-- **`packages/app`** → 包名 `@addchess/app`：React UI，依赖 `@addchess/core`（开发时通过 Vite alias 直接引用源码）。
+| 包 | 层级 | 说明 |
+|----|------|------|
+| **`packages/app`** → `@addchess/app` | **前端** | React UI，在**浏览器**运行 |
+| **`packages/server`** → `@addchess/server` | **后端** | Node 联机服务（**骨架**，WebSocket 待做） |
+| **`packages/core`** → `@addchess/core` | **共享** | 棋规与局面；浏览器与服务器**共用** |
 
-根目录的 `package.json` 只负责聚合脚本与子包，不包含业务代码。
+**当前可玩的本地对局** = 只有 **app + core**，没有联机后端。  
+前后端分工与联机数据流见：[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
 更细的**目录树与每个文件夹含义**见：[docs/STRUCTURE.md](./docs/STRUCTURE.md)。  
 **每个文件夹干什么、`node_modules` 能否动、哪些可删**：见 [docs/MODULE_INVENTORY.md](./docs/MODULE_INVENTORY.md)。

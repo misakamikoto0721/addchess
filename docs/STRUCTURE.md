@@ -4,14 +4,17 @@
 
 ---
 
-## 1. 为什么分成两个 `packages`？
+## 1. 为什么分成三个 `packages`？
 
-| 包 | 作用 |
-|----|------|
-| **`@addchess/core`** | **纯逻辑**：棋盘、走子、将军、变体状态。无 DOM、无 React，可被单元测试直接调用。 |
-| **`@addchess/app`** | **人机界面**：按钮、棋盘格子、高亮、流程状态（谁先点哪种操作）。 |
+| 包 | 层级 | 作用 |
+|----|------|------|
+| **`@addchess/core`** | **共享** | 纯逻辑：棋盘、走子、将军、变体状态。无 DOM、无 React、无网络。浏览器与 Node 均可 import。 |
+| **`@addchess/app`** | **前端** | 人机界面：按钮、棋盘、悔棋。在**用户浏览器**里运行。 |
+| **`@addchess/server`** | **后端** | 联机：房间号、WebSocket、广播局面（**当前为骨架**，见 `packages/server/`）。在**服务器**上常驻运行。 |
 
-这样拆的好处：**改规则主要在 core**；UI 只负责「调用 core 暴露的函数」和展示。
+这样拆的好处：**改规则主要在 core**；**改界面在 app**；**改联机在 server**；三者职责不混。
+
+整体分工见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ---
 
@@ -108,32 +111,53 @@ packages/app/
         └── useVariantGame.ts  # 变体交互状态机（选子、加棋步骤、升变）
 ```
 
-**依赖方向**：只允许 `app → core`，不要从 core 引用 React。
+**依赖方向**：只允许 `app → core`、`server → core`，不要从 core 引用 React 或 server 代码。
 
 ---
 
-## 5. 模块依赖关系（简图）
+## 5. `packages/server`（`@addchess/server`）
+
+**后端**联机服务（Node）。与浏览器里的 `app` 分离部署。
 
 ```
-App (React)
-  └── 调用 @addchess/core 导出函数
+packages/server/
+├── package.json
+├── tsconfig.json
+├── README.md
+└── src/
+    ├── index.ts       # HTTP 入口；将来挂载 WebSocket
+    ├── protocol.ts    # 前后端消息类型（规划）
+    └── rooms.ts       # 房间号与内存房间表（规划）
+```
+
+**依赖方向**：`server → core`（着法校验、初始化局面）。
+
+---
+
+## 6. 模块依赖关系（简图）
+
+```
+Browser: @addchess/app (React)
+  └── 调用 @addchess/core
+
+Cloud: @addchess/server (Node)
+  └── 调用 @addchess/core（权威校验 + 广播 snapshot）
 
 @addchess/core
-  ├── model（类型与棋盘 Map）
-  ├── chess（标准规则：攻击、走法、applyMove）
-  └── variant（加子棋：在 chess 之上叠规则）
-        ├── 使用 chess：applyMove、inCheck、generatePseudoLegalMoves …
-        └── 自有：reserve、pieceIds、连将、加子、空降
+  ├── model
+  ├── chess
+  └── variant
 ```
 
 ---
 
-## 6. 若你想改代码，从哪里下手？
+## 7. 若你想改代码，从哪里下手？
 
 | 目标 | 建议目录 |
 |------|----------|
 | 改「加子棋」规则（谁能走、能否加子、连将判定） | `packages/core/src/variant/` |
 | 改标准棋（易位、过路兵、将军判定） | `packages/core/src/chess/` |
 | 改棋盘样式、按钮流程 | `packages/app/src/components/`、`hooks/useVariantGame.ts`、`styles/App.css` |
+| 改联机、房间号、WebSocket | `packages/server/src/`（待实现） |
 
 如有新文档需求，可继续在 `docs/` 下追加专题页（例如「规则说明书」单独一页）。

@@ -1,0 +1,21 @@
+{
+  "name": "@addchess/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsup src/index.ts --format esm --clean"
+  },
+  "dependencies": {
+    "@addchess/core": "*",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
+  }
+}

@@ -15,10 +15,13 @@
 ## 自有源码总览（这才是「封装层级」）
 
 ```
-packages/core/src/     ← 棋规与数据（无 UI）
-packages/app/src/      ← 浏览器界面（React）
+packages/core/src/     ← 共享：棋规与数据（无 UI、无网络）
+packages/app/src/      ← 前端：浏览器界面（React）
+packages/server/src/   ← 后端：联机服务（Node，骨架）
 docs/                  ← 给人看的说明，不参与编译
 ```
+
+前后端分工详见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ---
 

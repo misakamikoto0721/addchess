@@ -1,5 +1,6 @@
 import type { GameStatus, PieceKind } from "@addchess/core";
 import { pieceAt, squareKey, type BlackReserve, type Piece, type Square } from "@addchess/core";
+import type { VariantGameController } from "../hooks/useMultiplayer.js";
 import { useVariantGame } from "../hooks/useVariantGame.js";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -93,7 +94,15 @@ function pieceKindsLabel(k: PieceKind): string {
   return "王";
 }
 
-export function VariantChess() {
+export function VariantChess({
+  game: gameProp,
+  online = false,
+}: {
+  game?: VariantGameController;
+  online?: boolean;
+} = {}) {
+  const localGame = useVariantGame();
+  const game = gameProp ?? localGame;
   const {
     variant,
     status,
@@ -103,6 +112,8 @@ export function VariantChess() {
     squareDecoration,
     onSquareClick,
     reset,
+    undo,
+    canUndo,
     whiteLegalKinds,
     canAdd,
     canTeleportBtn,
@@ -116,7 +127,13 @@ export function VariantChess() {
     cancelBlackFlow,
     choosePromotion,
     cancelPromotion,
-  } = useVariantGame();
+  } = game;
+
+  const seat = gameProp?.seat ?? null;
+  const awaitingWhitePickKind = gameProp?.awaitingWhitePickKind ?? false;
+  const showWhitePickPanel = gameProp?.showWhitePickPanel ?? false;
+  const pendingUndoFrom = gameProp?.pendingUndoFrom ?? null;
+  const canRespondUndo = gameProp?.canRespondUndo ?? false;
 
   const sideLabel =
     variant.phase === "place_black_king"
@@ -136,11 +153,23 @@ export function VariantChess() {
         />
 
         {variant.phase === "play" &&
-        variant.sideToMove === "black" &&
-        !terminal ? (
+        !terminal &&
+        (online ? seat === "black" : true) &&
+        variant.sideToMove === "black" ? (
           <div className="action-panel">
             <h3 className="action-title">黑方本回合</h3>
-            {blackStep === "pick_action" ? (
+            {awaitingWhitePickKind ? (
+              <div className="flow-banner">
+                <span>已发起加子，等待白方指定兵种…</span>
+                <button
+                  type="button"
+                  className="btn-muted small"
+                  onClick={cancelBlackFlow}
+                >
+                  取消加子
+                </button>
+              </div>
+            ) : blackStep === "pick_action" ? (
               <div className="action-buttons">
                 <button
                   type="button"
@@ -201,30 +230,37 @@ export function VariantChess() {
                 </button>
               </div>
             )}
+          </div>
+        ) : null}
 
-            {blackStep === "add_white_pick_kind" ? (
-              <div className="white-pick-kinds">
-                <p className="panel-sub">白方指定兵种（灰=库存不足或连续限制）</p>
-                <div className="kind-buttons">
-                  {WHITE_ADD_KIND_ORDER.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      className="btn-kind"
-                      disabled={!whiteLegalKinds.includes(k)}
-                      title={
-                        !whiteLegalKinds.includes(k)
-                          ? "备战区无此子或白方连续加子限制不允许"
-                          : undefined
-                      }
-                      onClick={() => whitePickPieceKind(k)}
-                    >
-                      {pieceKindsLabel(k)}
-                    </button>
-                  ))}
-                </div>
+        {variant.phase === "play" &&
+        !terminal &&
+        !showWhitePickPanel &&
+        blackStep === "add_white_pick_kind" &&
+        !online ? (
+          <div className="action-panel white-pick-panel">
+            <h3 className="action-title">白方指定加子兵种</h3>
+            <div className="white-pick-kinds">
+              <p className="panel-sub">灰=库存不足或连续限制</p>
+              <div className="kind-buttons">
+                {WHITE_ADD_KIND_ORDER.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className="btn-kind"
+                    disabled={!whiteLegalKinds.includes(k)}
+                    title={
+                      !whiteLegalKinds.includes(k)
+                        ? "备战区无此子或白方连续加子限制不允许"
+                        : undefined
+                    }
+                    onClick={() => whitePickPieceKind(k)}
+                  >
+                    {pieceKindsLabel(k)}
+                  </button>
+                ))}
               </div>
-            ) : null}
+            </div>
           </div>
         ) : null}
       </aside>
@@ -245,9 +281,42 @@ export function VariantChess() {
               </>
             )}
           </span>
-          <button type="button" className="btn-reset" onClick={reset}>
-            新对局
-          </button>
+          <span className="board-toolbar-actions">
+            {!online ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-undo"
+                  disabled={!canUndo}
+                  title={
+                    promotion
+                      ? "关闭升变选择"
+                      : "退一步（放置黑王、走子、加子、空降均可撤销）"
+                  }
+                  onClick={undo}
+                >
+                  悔棋
+                </button>
+                <button type="button" className="btn-reset" onClick={reset}>
+                  新对局
+                </button>
+              </>
+            ) : (
+              <>
+                {canRespondUndo ? null : (
+                  <button
+                    type="button"
+                    className="btn-undo"
+                    disabled={!canUndo || Boolean(pendingUndoFrom)}
+                    title="向对手申请撤销你的上一步（需对方同意）"
+                    onClick={undo}
+                  >
+                    申请悔棋
+                  </button>
+                )}
+              </>
+            )}
+          </span>
         </div>
 
         <section className="board-wrap board-wrap-variant" aria-label="棋盘">

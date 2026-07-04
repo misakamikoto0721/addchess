@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VariantSnapshot } from "@addchess/core";
 import {
   applyBlackAdd,
@@ -53,7 +53,14 @@ function movesMatching(moves: Move[], from: Square, to: Square): Move[] {
   );
 }
 
+function cloneSnapshot(v: VariantSnapshot): VariantSnapshot {
+  return structuredClone(v);
+}
+
 export function useVariantGame() {
+  const pastRef = useRef<VariantSnapshot[]>([]);
+  const [, setHistoryBump] = useState(0);
+
   const [variant, setVariant] = useState<VariantSnapshot>(createVariantInitial);
   const [selected, setSelected] = useState<Square | null>(null);
   const [blackStep, setBlackStep] = useState<BlackStep>("pick_action");
@@ -81,13 +88,43 @@ export function useVariantGame() {
     setSelected(null);
   }, [variant.sideToMove, variant.phase]);
 
+  const advanceVariant = useCallback(
+    (next: VariantSnapshot | null, before: VariantSnapshot) => {
+      if (!next) return false;
+      pastRef.current.push(cloneSnapshot(before));
+      setHistoryBump((n) => n + 1);
+      setVariant(next);
+      return true;
+    },
+    [],
+  );
+
   const reset = useCallback(() => {
+    pastRef.current = [];
+    setHistoryBump((n) => n + 1);
     setVariant(createVariantInitial());
     setSelected(null);
     setBlackStep("pick_action");
     setAddKind(null);
     setPromotion(null);
   }, []);
+
+  const undo = useCallback(() => {
+    if (promotion) {
+      setPromotion(null);
+      return;
+    }
+    if (pastRef.current.length === 0) return;
+    const prev = pastRef.current.pop()!;
+    setHistoryBump((n) => n + 1);
+    setVariant(prev);
+    setSelected(null);
+    setBlackStep("pick_action");
+    setAddKind(null);
+  }, [promotion]);
+
+  const canUndo =
+    promotion !== null || pastRef.current.length > 0;
 
   const whiteLegalKinds = useMemo(
     () => whiteLegalPieceKinds(variant),
@@ -202,13 +239,12 @@ export function useVariantGame() {
         return false;
       }
       const next = applyNormalMove(variant, pick);
-      if (!next) return false;
-      setVariant(next);
+      if (!advanceVariant(next, variant)) return false;
       setSelected(null);
       setPromotion(null);
       return true;
     },
-    [variant],
+    [variant, advanceVariant],
   );
 
   const onSquareClick = useCallback(
@@ -218,7 +254,7 @@ export function useVariantGame() {
 
       if (variant.phase === "place_black_king") {
         const next = applyPlaceBlackKing(variant, sq);
-        if (next) setVariant(next);
+        if (next) advanceVariant(next, variant);
         return;
       }
 
@@ -287,8 +323,7 @@ export function useVariantGame() {
             return;
           }
           const next = applyBlackAdd(variant, addKind, sq);
-          if (next) {
-            setVariant(next);
+          if (next && advanceVariant(next, variant)) {
             setBlackStep("pick_action");
             setAddKind(null);
             setSelected(null);
@@ -301,8 +336,7 @@ export function useVariantGame() {
         const legal = legalTeleportSquares(variant);
         if (legal.some((s) => sameSq(s, sq))) {
           const next = applyBlackTeleport(variant, sq);
-          if (next) {
-            setVariant(next);
+          if (next && advanceVariant(next, variant)) {
             setBlackStep("pick_action");
             setSelected(null);
           }
@@ -317,6 +351,7 @@ export function useVariantGame() {
       addKind,
       selected,
       tryApplyMove,
+      advanceVariant,
     ],
   );
 
@@ -332,15 +367,14 @@ export function useVariantGame() {
           promotion.to,
           kind,
         );
-        if (next) {
-          setVariant(next);
+        if (next && advanceVariant(next, variant)) {
           setPromotion(null);
           setBlackStep("pick_action");
           setAddKind(null);
         }
       }
     },
-    [promotion, variant, tryApplyMove],
+    [promotion, variant, tryApplyMove, advanceVariant],
   );
 
   const cancelPromotion = useCallback(() => setPromotion(null), []);
@@ -383,6 +417,8 @@ export function useVariantGame() {
     squareDecoration,
     onSquareClick,
     reset,
+    undo,
+    canUndo,
     whiteLegalKinds,
     canAdd,
     canTeleportBtn,

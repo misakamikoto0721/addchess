@@ -16,6 +16,7 @@ export {
   addCategoryForKind,
   applyBlackAdd,
   kindsAvailableInCategory,
+  reserveCategoriesWithStock,
   whiteLegalAddCategories,
   whiteLegalPieceKinds,
 } from "./addPiece.js";
