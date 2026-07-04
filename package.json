@@ -8,6 +8,7 @@
     "build:core": "npm run build -w @addchess/core",
     "build": "npm run build -w @addchess/app",
     "build:server": "npm run build:core && npm run build -w @addchess/server",
+    "build:prod": "npm run build:server && npm run build -w @addchess/app",
     "dev": "npm run dev -w @addchess/app",
     "dev:server": "npm run dev -w @addchess/server",
     "start:server": "npm run start -w @addchess/server",

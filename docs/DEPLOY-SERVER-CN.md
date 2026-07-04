@@ -1,146 +1,137 @@
-# 国内部署联机后端（替代 Railway）
+# 腾讯云部署（前端 + 联机后端）
 
-前端继续用 **Vercel**；只把 `@addchess/server` 放到国内能 **支付宝 / 微信** 付款的云主机上。
+推荐 **腾讯云轻量应用服务器（香港）** + 域名，前后端同一台机器，国内访问比 Vercel 稳定。
 
-推荐：**腾讯云轻量应用服务器（香港）** 或 **雨云** 云服务器（香港）。  
-选香港节点通常 **不用 ICP 备案**，适合个人小项目。
-
----
-
-## 1. 买什么
-
-| 项目 | 建议 |
-|------|------|
-| 配置 | 1 核 1G 内存即可 |
-| 系统 | Ubuntu 22.04 |
-| 地域 | **香港**（免备案，Vercel 前端也能连） |
-| 付款 | 腾讯云 / 雨云均支持国内支付方式 |
-
-购机后在防火墙 / 安全组放行：**22（SSH）**、**80**、**443**。  
-Node 进程只监听本机 `3000`，对外由 Nginx 提供 HTTPS + WebSocket。
+| 用途 | 地址（示例） |
+|------|----------------|
+| **网页** | `https://addchess.cn` |
+| **联机 WebSocket** | `wss://ws.addchess.cn` |
+| **健康检查** | `https://ws.addchess.cn/health` |
 
 ---
 
-## 2. 服务器上安装环境
+## 0. DNS 解析（DNSPod）
 
-SSH 登录后：
+| 主机记录 | 类型 | 记录值 |
+|----------|------|--------|
+| `@` | A | 服务器公网 IP |
+| `www` | A | 同上 |
+| `ws` | A | 同上 |
+
+---
+
+## 1. 服务器环境（一次性）
+
+OrcaTerm / SSH 登录后：
 
 ```bash
 sudo apt update
-sudo apt install -y git nginx certbot python3-certbot-nginx
-
-# Node 22（示例：NodeSource）
+sudo apt install -y git nginx certbot python3-certbot-nginx rsync
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
-
 sudo npm install -g pm2
 ```
 
+防火墙放行 **22、80、443**。
+
 ---
 
-## 3. 拉代码并构建
+## 2. 克隆仓库与配置
 
 ```bash
 git clone https://github.com/misakamikoto0721/addchess.git
 cd addchess
-npm ci
-npm run build --workspace=@addchess/server
+cp deploy/config.env.example deploy/config.env
+# 若域名不同，编辑 deploy/config.env
 ```
 
-验证本地能起：
+`deploy/config.env` 示例：
 
 ```bash
-PORT=3000 HOST=0.0.0.0 npm run start:server
-# 另开终端：curl http://127.0.0.1:3000/health
-# Ctrl+C 停掉，改用 pm2
+ADDCHESS_DOMAIN=addchess.cn
+ADDCHESS_WS_HOST=ws.addchess.cn
+ADDCHESS_WEB_ROOT=/var/www/addchess
+VITE_WS_URL=wss://ws.addchess.cn
+PUBLIC_WS_URL=wss://ws.addchess.cn
 ```
 
 ---
 
-## 4. 用 PM2 常驻运行
+## 3. Nginx（一次性）
 
-仓库根目录已有 `ecosystem.config.cjs`：
+若 **尚未** 配置 Nginx：
 
 ```bash
 cd ~/addchess
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup    # 按提示执行它打印的那条 sudo 命令
+bash scripts/install-nginx-site.sh
+sudo certbot --nginx -d addchess.cn -d www.addchess.cn -d ws.addchess.cn
 ```
 
----
-
-## 5. 域名 + HTTPS（必须，否则 Vercel 页面连不上 wss）
-
-浏览器从 `https://addchess.vercel.app` 发起联机，后端必须是 **`wss://` 且证书可信**。
-
-1. 买一个域名（任意注册商），添加 **A 记录** → 指向服务器公网 IP  
-   例如：`ws.你的域名.com`
-2. 复制 `deploy/nginx-addchess.conf.example`，改 `server_name` 后放到 Nginx
-3. 申请证书：
+若 **已经** 只有 `ws.addchess.cn` 的反代，可改为完整站点：
 
 ```bash
-sudo certbot --nginx -d ws.你的域名.com
+cd ~/addchess
+bash scripts/install-nginx-site.sh
+sudo certbot --nginx -d addchess.cn -d www.addchess.cn -d ws.addchess.cn
+sudo systemctl reload nginx
 ```
-
-4. 在 `ecosystem.config.cjs` 里设置环境变量后重启：
-
-```bash
-# 编辑 ecosystem.config.cjs，取消注释并填写：
-# PUBLIC_WS_URL: "wss://ws.你的域名.com"
-
-pm2 restart addchess-server
-```
-
-5. 浏览器访问：`https://ws.你的域名.com/health`  
-   应返回 `{"ok":true,...,"ws":"wss://ws.你的域名.com"}`
 
 ---
 
-## 6. 改 Vercel 前端
-
-Vercel → 项目 **addchess** → **Environment Variables**：
-
-| Key | Value |
-|-----|--------|
-| `VITE_WS_URL` | `wss://ws.你的域名.com` |
-
-保存 → **Deployments** → **Redeploy**。
-
----
-
-## 7. 以后更新后端
+## 4. 构建并发布（首次 + 以后更新）
 
 ```bash
 cd ~/addchess
 git pull
-bash scripts/server-update.sh
+bash scripts/deploy-all.sh
+pm2 startup   # 首次：按提示执行打印出的 sudo 命令
 ```
 
----
+验证：
 
-## 8. 和 Railway 的区别
+```bash
+curl -s http://127.0.0.1:3000/health
+curl -sI https://addchess.cn | head -n 1
+```
 
-| | Railway | 国内 VPS |
-|--|---------|----------|
-| 付款 | 国际信用卡 | 支付宝 / 微信 |
-| 运维 | 平台托管 | 自己 SSH + pm2 |
-| WebSocket | 平台域名 | 需自备域名 + Nginx |
-| 费用 | ~$5/月起 | 轻量机约几十元/年（活动价） |
-
-Railway 上的服务可以停用，避免继续扣费。
+浏览器打开 **https://addchess.cn** → **联机对战**，应显示 `wss://ws.addchess.cn`。
 
 ---
 
-## 9. 常见问题
+## 5. 本地开发（可选）
 
-**创建房间一直连不上**  
-- 查 `curl https://ws.你的域名.com/health`  
-- Vercel 是否 Redeploy 且 `VITE_WS_URL` 为 `wss://`  
-- 安全组是否放行 443  
+```bash
+cp packages/app/.env.development.example packages/app/.env.development.local
+# 取消注释 VITE_WS_URL=wss://ws.addchess.cn 可连云端后端
+npm run dev
+```
 
-**只有 IP 没有域名**  
-- HTTPS 页面无法稳定连 `wss://IP`（证书问题），建议买一个便宜域名  
+生产构建联机地址见 `packages/app/.env.production.example`。
 
-**仍想零运维**  
-- 可继续用 Railway Free（$1/月额度，有国际卡时）或本地 `npm run dev:server` 局域网联机  
+---
+
+## 6. 与 Vercel 的关系
+
+| | Vercel | 腾讯云香港 |
+|--|--------|------------|
+| 国内访问 | 常超时 | 较稳定 |
+| 前端 | `*.vercel.app` | `addchess.cn` |
+| 后端 | 需另购 Railway 等 | 同机 `ws.addchess.cn` |
+
+迁移完成后可停用 Vercel 项目，避免混淆。
+
+---
+
+## 7. 常见问题
+
+**联机连不上**  
+- `curl https://ws.addchess.cn/health` 是否 `ok:true`  
+- 前端是否用 `deploy-all.sh` 重新构建（内含 `VITE_WS_URL`）  
+- 防火墙是否放行 443  
+
+**页面 404**  
+- `ls /var/www/addchess/index.html` 是否存在  
+- Nginx `root` 是否指向 `/var/www/addchess`  
+
+**仍用 Railway**  
+- 仅后端可继续用 Railway；前端仍建议迁到国内 VPS 以改善访问。

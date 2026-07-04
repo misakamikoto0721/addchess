@@ -9,7 +9,7 @@
 | 包 | npm 名 | 层级 | 运行位置 | 当前状态 |
 |----|--------|------|----------|----------|
 | **`packages/app`** | `@addchess/app` | **前端** | 用户**浏览器** | ✅ 已实现（React + Vite） |
-| **`packages/server`** | `@addchess/server` | **后端** | **云服务器 / 本机 Node** | 🚧 骨架已建，联机逻辑待实现 |
+| **`packages/server`** | `@addchess/server` | **后端** | **云服务器 / 本机 Node** | ✅ 已实现（WebSocket 房间 + 校验） |
 | **`packages/core`** | `@addchess/core` | **共享规则引擎** | 浏览器 **或** Node | ✅ 已实现（无 UI、无网络） |
 
 **重要**：`@addchess/core` **既不是前端也不是后端**，而是**两边都要用的棋规库**。  
@@ -106,8 +106,8 @@ flowchart LR
 
 | 产物 | 部署到哪 | 命令示例 |
 |------|----------|----------|
-| `packages/app/dist/` | GitHub Pages / Vercel / Nginx 静态目录 | `npm run build` |
-| `packages/server` 编译结果 | Railway / **国内 VPS** / 云主机 Node 进程 | 见 [docs/DEPLOY-SERVER-CN.md](./docs/DEPLOY-SERVER-CN.md) |
+| `packages/app/dist/` | **Nginx 静态目录**（`https://addchess.cn`） | `bash scripts/deploy-all.sh` |
+| `packages/server` 编译结果 | 同机 pm2 + `wss://ws.addchess.cn` | 同上 |
 
 - **前端**：静态文件，**不能**单独实现 WebSocket 房间。  
 - **后端**：必须 **24/7 在线**（或至少对局期间在线），别人才能用房间号联机。

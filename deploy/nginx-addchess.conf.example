@@ -1,5 +1,5 @@
-# Copy to /etc/nginx/sites-available/addchess and symlink to sites-enabled.
-# Replace ws.example.com with your domain. Cert: certbot --nginx -d ws.example.com
+# WebSocket-only snippet (legacy). Prefer deploy/nginx-site.conf.example
+# for frontend + backend on one VPS.
 
 server {
     listen 80;

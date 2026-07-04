@@ -7,6 +7,9 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  /** Load .env.production from packages/app when building for VPS. */
+  envDir: dir,
+  base: "/",
   server: {
     fs: {
       allow: [path.resolve(dir, "../..")],

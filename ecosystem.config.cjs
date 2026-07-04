@@ -10,8 +10,7 @@ module.exports = {
         NODE_ENV: "production",
         HOST: "0.0.0.0",
         PORT: "3000",
-        // After nginx + HTTPS, set e.g. wss://ws.yourdomain.com
-        // PUBLIC_WS_URL: "wss://ws.example.com",
+        PUBLIC_WS_URL: "wss://ws.addchess.cn",
       },
     },
   ],
