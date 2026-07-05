@@ -120,6 +120,3 @@ npm run dev
 **页面 404**  
 - `ls /var/www/addchess/index.html` 是否存在  
 - Nginx `root` 是否指向 `/var/www/addchess`  
-
-**仍用 Railway 仅作后端**  
-- 不推荐；当前生产为腾讯云 `addchess.cn` + `ws.addchess.cn`。

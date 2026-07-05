@@ -18,48 +18,21 @@
 
 ---
 
-## 2. 现在整仓代码属于哪一层？
-
-### 全是「前端 + 共享逻辑」，还没有可联机的后端业务
+## 2. 代码分层（概览）
 
 ```
 addchess/
-├── docs/                    # 文档（不属于运行时）
-├── package.json             # 根：workspaces 聚合脚本
-│
-├── packages/app/            # ★ 前端 — 全部在用户浏览器执行
-│   └── src/
-│       ├── main.tsx, App.tsx
-│       ├── components/      # 棋盘、按钮、规则展示
-│       ├── hooks/           # useVariantGame：本地 state、悔棋
-│       └── styles/
-│
-├── packages/core/             # ★ 共享 — 无 DOM、无 React、无 WebSocket
-│   └── src/
-│       ├── model/           # 棋盘、棋子类型
-│       ├── chess/           # 标准国际象棋
-│       └── variant/         # 加子棋规则
-│
-└── packages/server/           # ★ 后端 — 仅占位，尚未处理对局
-    └── src/                 # 将来：房间号、WebSocket、广播局面
+├── packages/app/      # 前端（React + Vite）
+├── packages/server/   # 联机后端（WebSocket + 房间）
+└── packages/core/     # 共享规则引擎
 ```
 
-### 逐项对照
-
-| 路径 | 前端 / 后端 / 共享 | 说明 |
-|------|-------------------|------|
-| `packages/app/**` | **前端** | 页面、交互、样式；`npm run dev` 起的是 Vite，只服务浏览器 |
-| `packages/core/**` | **共享** | 规则与 `VariantSnapshot`；可被 app 与 server 引用 |
-| `packages/server/**` | **后端** | 常驻 Node 进程；对外提供 WebSocket（规划） |
-| `docs/**`, `README.md` | 无 | 文档 |
-| 根 `package.json` | 无 | 脚本入口，不是业务代码 |
-
-**结论**：你目前能玩的「本地加子棋」= **`app`（前端壳） + `core`（在浏览器里当引擎）**。  
-**没有**任何代码在公网上替两人转发着法；`localhost:5173` 只是本机开发服务器，不是联机后端。
+本地开发：`npm run dev` + 可选 `npm run dev:server`。  
+线上：`https://addchess.cn` + `wss://ws.addchess.cn`（见 [DEPLOY-SERVER-CN.md](./DEPLOY-SERVER-CN.md)）。
 
 ---
 
-## 3. 联机目标架构（参考 room 号站点）
+## 3. 联机架构（已实现）
 
 ```mermaid
 flowchart LR
@@ -85,20 +58,7 @@ flowchart LR
 | 点格子 / 加子 | **app** 发 `{ type: 'move', ... }` → **server** 用 core `apply*` 校验 → 广播新 snapshot |
 | 渲染棋盘 | **app** 只根据收到的 snapshot 显示（不再单方面改权威局面） |
 
-前端将来会多：
-
-- 房间页（输入房间号 / 创建房间）
-- `useMultiplayerGame` 或扩展 `useVariantGame`：连 `ws://` / `wss://`
-- 环境变量：`VITE_WS_URL`（开发 `localhost:3000`，生产 `wss://你的域名`）
-
-后端将来会多（在 `packages/server/src/`）：
-
-| 文件（规划） | 职责 |
-|--------------|------|
-| `index.ts` | 启动 HTTP + WebSocket |
-| `rooms.ts` | 房间号 → 两名玩家 socket + 局面 |
-| `protocol.ts` | 前后端 JSON 消息类型 |
-| `wire.ts` 或放在 core | `VariantSnapshot` ↔ JSON（Map 序列化） |
+联机前端通过构建时环境变量 `VITE_WS_URL`（生产为 `wss://ws.addchess.cn`）连接后端。
 
 ---
 
@@ -119,7 +79,7 @@ flowchart LR
 | 命令 | 作用 |
 |------|------|
 | `npm run dev` | 仅 **前端** 开发（Vite，`localhost:5173`） |
-| `npm run dev:server` | **后端** 开发（Node，`localhost:3000`，当前为健康检查占位） |
+| `npm run dev:server` | **后端** 开发（Node，`localhost:3000`） |
 | `npm test` | 测 **core**（规则引擎） |
 | `npm run build` | 构建 **前端** 静态站 |
 | `npm run build:core` | 构建 **core**（server 引用 dist 前需要） |
