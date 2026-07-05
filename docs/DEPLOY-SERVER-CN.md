@@ -132,9 +132,15 @@ npm run dev
 
 ```bash
 cd ~/addchess && git pull
+bash scripts/enable-nginx-gzip.sh
+```
+
+若报错 `"gzip" directive is duplicate`，说明 **主配置里已有 `gzip on`**，不要重复复制 `addchess-gzip.conf`。脚本会自动删掉重复文件并检查 `gzip_types` 是否包含 JS。
+
+手动方式（不推荐，易重复）：
+
+```bash
 sudo cp deploy/nginx-gzip.conf.example /etc/nginx/conf.d/addchess-gzip.conf
-sudo cp deploy/nginx-site.conf.example /tmp/addchess-nginx.conf
-# 若域名不是 addchess.cn，按 install-nginx-site.sh 同样 sed 替换后再 mv
 sudo nginx -t && sudo systemctl reload nginx
 ```
 

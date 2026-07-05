@@ -24,10 +24,7 @@ sudo sed -i "s|/var/www/addchess|${WEB_ROOT}|g" /tmp/addchess-nginx.conf
 sudo mv /tmp/addchess-nginx.conf /etc/nginx/sites-available/addchess
 sudo ln -sf /etc/nginx/sites-available/addchess /etc/nginx/sites-enabled/addchess
 
-sudo cp deploy/nginx-gzip.conf.example /etc/nginx/conf.d/addchess-gzip.conf
-
-sudo nginx -t
-sudo systemctl reload nginx
+bash scripts/enable-nginx-gzip.sh
 
 echo "Nginx site installed (gzip + static cache). Next:"
 echo "  sudo certbot --nginx -d ${DOMAIN} -d www.${DOMAIN} -d ${WS_HOST}"
