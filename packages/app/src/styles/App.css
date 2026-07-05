@@ -147,6 +147,38 @@ body {
   line-height: 1.35;
 }
 
+.add-kind-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.add-kind-reveal-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #9aa3b2;
+}
+
+.add-kind-reveal-piece {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+}
+
+.add-kind-reveal-piece .piece {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.board-add-kind {
+  color: #b8c0cc;
+}
+
+.board-add-kind strong {
+  color: #e8c36a;
+}
+
 .btn-muted.small {
   align-self: flex-start;
   padding: 0.2rem 0.5rem;

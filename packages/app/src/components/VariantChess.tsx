@@ -127,6 +127,7 @@ export function VariantChess({
     cancelBlackFlow,
     choosePromotion,
     cancelPromotion,
+    addKind,
   } = game;
 
   const seat = gameProp?.seat ?? null;
@@ -212,15 +213,33 @@ export function VariantChess({
               </div>
             ) : (
               <div className="flow-banner">
-                <span>
-                  {blackStep === "moving"
-                    ? "请在棋盘上走子（绿=可走，红=造型可到但被规则禁）"
-                    : blackStep === "add_white_pick_kind"
-                      ? "请白方点选要加入的兵种"
-                      : blackStep === "add_square"
-                        ? "请黑方点选空格落子（绿=可放，红=不可放）"
-                        : "空降：绿=安全格，红=空但会被将军"}
-                </span>
+                {blackStep === "add_square" && addKind ? (
+                  <div className="add-kind-reveal">
+                    <p className="add-kind-reveal-label">白方指定加入</p>
+                    <div className="add-kind-reveal-piece">
+                      <span
+                        className="piece piece-black"
+                        aria-hidden
+                      >
+                        {UNICODE[addKind].black}
+                      </span>
+                      <strong>{pieceKindsLabel(addKind)}</strong>
+                    </div>
+                    <p className="panel-sub">
+                      请点选空格落子（绿=可放，红=不可放）
+                    </p>
+                  </div>
+                ) : (
+                  <span>
+                    {blackStep === "moving"
+                      ? "请在棋盘上走子（绿=可走，红=造型可到但被规则禁）"
+                      : blackStep === "add_white_pick_kind"
+                        ? "请白方点选要加入的兵种"
+                        : blackStep === "add_square"
+                          ? "请黑方点选空格落子（绿=可放，红=不可放）"
+                          : "空降：绿=安全格，红=空但会被将军"}
+                  </span>
+                )}
                 <button
                   type="button"
                   className="btn-muted small"
@@ -278,6 +297,16 @@ export function VariantChess({
               <>
                 行棋方：<strong>{sideLabel}</strong>
                 {extra ? <span className="board-check"> · {extra}</span> : null}
+                {online &&
+                seat === "white" &&
+                addKind &&
+                !awaitingWhitePickKind ? (
+                  <span className="board-add-kind">
+                    {" "}
+                    · 已指定{" "}
+                    <strong>{pieceKindsLabel(addKind)}</strong>，等待黑方落子
+                  </span>
+                ) : null}
               </>
             )}
           </span>

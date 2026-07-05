@@ -6,10 +6,10 @@
 
 | 用途 | 地址 |
 |------|------|
-| **网页（推荐）** | https://addchess.cn |
+| **网页** | https://addchess.cn |
 | **联机 WebSocket** | `wss://ws.addchess.cn` |
 
-国内用户请使用 **腾讯云香港** 部署（见 [docs/DEPLOY-SERVER-CN.md](./docs/DEPLOY-SERVER-CN.md)）。`*.vercel.app` 在国内常无法访问。
+线上前后端均托管在 **腾讯云香港**（见 [docs/DEPLOY-SERVER-CN.md](./docs/DEPLOY-SERVER-CN.md)）。
 
 ## 快速开始（本地开发）
 

@@ -1,6 +1,6 @@
 # 腾讯云部署（前端 + 联机后端）
 
-推荐 **腾讯云轻量应用服务器（香港）** + 域名，前后端同一台机器，国内访问比 Vercel 稳定。
+推荐 **腾讯云轻量应用服务器（香港）** + 域名，前后端同一台机器。
 
 | 用途 | 地址（示例） |
 |------|----------------|
@@ -110,19 +110,7 @@ npm run dev
 
 ---
 
-## 6. 与 Vercel 的关系
-
-| | Vercel | 腾讯云香港 |
-|--|--------|------------|
-| 国内访问 | 常超时 | 较稳定 |
-| 前端 | `*.vercel.app` | `addchess.cn` |
-| 后端 | 需另购 Railway 等 | 同机 `ws.addchess.cn` |
-
-迁移完成后可停用 Vercel 项目，避免混淆。
-
----
-
-## 7. 常见问题
+## 6. 常见问题
 
 **联机连不上**  
 - `curl https://ws.addchess.cn/health` 是否 `ok:true`  
@@ -133,5 +121,5 @@ npm run dev
 - `ls /var/www/addchess/index.html` 是否存在  
 - Nginx `root` 是否指向 `/var/www/addchess`  
 
-**仍用 Railway**  
-- 仅后端可继续用 Railway；前端仍建议迁到国内 VPS 以改善访问。
+**仍用 Railway 仅作后端**  
+- 不推荐；当前生产为腾讯云 `addchess.cn` + `ws.addchess.cn`。
