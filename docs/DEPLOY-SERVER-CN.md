@@ -110,7 +110,50 @@ npm run dev
 
 ---
 
-## 6. 常见问题
+## 6. 公网加载慢（排查与修复）
+
+**现象**：打开 `https://addchess.cn` 长时间白屏，各网络都慢。
+
+**在浏览器 Network 里看**（Disable cache + 硬刷新）：
+
+| 检查项 | 正常 | 你服务器上常见异常 |
+|--------|------|-------------------|
+| 主 JS `index-*.js` 的 **Content-Encoding** | `gzip` | **没有**（体积 ~226 KB 原文） |
+| 主 JS gzip 后体积 | ~70 KB | 未压缩 |
+| 首屏 HTML | 有「加载中…」占位 | 空白直到 JS 跑完 |
+
+**根因（与 dev 无关）**：
+
+1. **Nginx 未开 gzip** — 浏览器即使用 gzip 请求，仍收到 226 KB 原文（可用下面命令自测）。
+2. **整页 UI 全靠 JS** — React 跑起来之前页面是空的；主包还含 React + 棋规引擎，下载后要 **解析/编译** 才能出联机大厅。
+3. **静态资源无长期缓存** — 每次访问都重新拉 JS（已在新版 Nginx 配置里为 `/assets/` 加了 `immutable`）。
+
+**一次性修复 gzip（已有站点，在 VPS 执行）**：
+
+```bash
+cd ~/addchess && git pull
+sudo cp deploy/nginx-gzip.conf.example /etc/nginx/conf.d/addchess-gzip.conf
+sudo cp deploy/nginx-site.conf.example /tmp/addchess-nginx.conf
+# 若域名不是 addchess.cn，按 install-nginx-site.sh 同样 sed 替换后再 mv
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+验证 gzip 已生效：
+
+```bash
+curl -sI -H "Accept-Encoding: gzip" https://addchess.cn/assets/index-*.js | grep -i content-encoding
+# 应看到: Content-Encoding: gzip
+```
+
+然后重新部署前端（含 index 占位文案）：
+
+```bash
+bash scripts/deploy-all.sh
+```
+
+---
+
+## 7. 常见问题
 
 **联机连不上**  
 - `curl https://ws.addchess.cn/health` 是否 `ok:true`  
