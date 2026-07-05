@@ -1,6 +1,12 @@
-import { VariantChess } from "./VariantChess.js";
+import { Suspense, lazy } from "react";
 import { useMultiplayer } from "../hooks/useMultiplayer.js";
 import type { PieceKind } from "@addchess/core";
+
+const VariantChess = lazy(() =>
+  import("./VariantChess.js").then((m) => ({
+    default: m.VariantChess,
+  })),
+);
 
 const WHITE_ADD_KIND_ORDER: PieceKind[] = [
   "pawn",
@@ -79,7 +85,9 @@ export function MultiplayerPanel() {
           </div>
         ) : null}
 
-        <VariantChess game={g} online />
+        <Suspense fallback={<p className="load-notice">加载棋盘…</p>}>
+          <VariantChess game={g} online />
+        </Suspense>
 
         {g.showWhitePickPanel ? (
           <div className="white-pick-overlay" role="dialog" aria-label="白方指定加子兵种">
@@ -108,6 +116,8 @@ export function MultiplayerPanel() {
 
   return (
     <div className="lobby-panel">
+      <h2 className="lobby-title">联机大厅</h2>
+
       {mp.opponentLeft ? (
         <p className="online-notice" role="alert">
           对手已离开房间。你可以继续等待新对手加入，或离开房间。
@@ -115,15 +125,15 @@ export function MultiplayerPanel() {
       ) : null}
 
       <p className="lobby-hint">
-        联机服务器：<code>{mp.wsUrl}</code>
-        <br />
         {isLocalDev ? (
           <>
+            联机服务器：<code>{mp.wsUrl}</code>
+            <br />
             请先在本机另开终端运行 <code>npm run dev:server</code>
             ，再用两个浏览器窗口测试。
           </>
         ) : (
-          <>把房间号发给对手；两人到齐后，房主点「开始游戏」。</>
+          <>创建房间或输入房间号加入；两人到齐后，房主点「开始游戏」。</>
         )}
       </p>
 

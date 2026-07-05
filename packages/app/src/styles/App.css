@@ -242,37 +242,76 @@ body {
 }
 
 .app-header h1 {
-  margin: 0 0 0.25rem;
+  margin: 0;
   font-size: 1.75rem;
   font-weight: 650;
 }
 
+.app-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.app-brand {
+  min-width: 0;
+}
+
+.app-tagline {
+  margin: 0.2rem 0 0;
+  font-size: 0.88rem;
+  color: #7f8a9c;
+  font-weight: 500;
+}
+
+.btn-mode-alt {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+}
+
 .app-subtitle {
-  margin: 0 0 0.75rem;
+  margin: 0 0 1.25rem;
   color: #9aa3b2;
   font-size: 0.95rem;
 }
 
-.mode-tabs {
+.app-main {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.mode-tab {
-  font: inherit;
+.load-notice {
+  margin: 0;
+  color: #8b95a8;
+  font-size: 0.9rem;
+}
+
+.rules-collapsed {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #252933;
+  border: 1px solid #3b4252;
+  border-radius: 10px;
+}
+
+.rules-collapsed summary {
   cursor: pointer;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid #4c566a;
-  background: #2e3440;
-  color: #aeb6c5;
+  font-weight: 600;
+  color: #c7cdd8;
+  user-select: none;
 }
 
-.mode-tab.active {
-  background: #3b4252;
-  color: #eceff4;
-  border-color: #5e81ac;
+.rules-collapsed .rules-doc {
+  margin-top: 1rem;
+}
+
+.rules-collapsed .rules-doc h2 {
+  display: none;
 }
 
 .lobby-panel {
@@ -280,7 +319,12 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-bottom: 2rem;
+}
+
+.lobby-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 650;
 }
 
 .lobby-hint {
