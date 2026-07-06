@@ -1,7 +1,7 @@
-# Global gzip for static assets (JS/CSS/HTML). Install via scripts/install-nginx-site.sh
-# or: sudo cp deploy/nginx-gzip.conf.example /etc/nginx/conf.d/addchess-gzip.conf && sudo nginx -t && sudo systemctl reload nginx
+# Supplemental gzip settings (safe when nginx.conf already has "gzip on;").
+# Install: bash scripts/enable-nginx-gzip.sh
+# Do NOT add a second "gzip on;" here — that causes duplicate directive errors.
 
-gzip on;
 gzip_vary on;
 gzip_proxied any;
 gzip_comp_level 6;

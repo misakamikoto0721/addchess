@@ -135,13 +135,18 @@ cd ~/addchess && git pull
 bash scripts/enable-nginx-gzip.sh
 ```
 
-若报错 `"gzip" directive is duplicate`，说明 **主配置里已有 `gzip on`**，不要重复复制 `addchess-gzip.conf`。脚本会自动删掉重复文件并检查 `gzip_types` 是否包含 JS。
-
-手动方式（不推荐，易重复）：
+若报错 `"gzip" directive is duplicate`，说明主配置里已有 `gzip on`，**不要**在 conf.d 里再写一行 `gzip on`。仓库里的 `nginx-gzip.conf.example` 只补充 `gzip_types`（含 JS/CSS）。
 
 ```bash
-sudo cp deploy/nginx-gzip.conf.example /etc/nginx/conf.d/addchess-gzip.conf
-sudo nginx -t && sudo systemctl reload nginx
+cd ~/addchess && git pull
+bash scripts/enable-nginx-gzip.sh
+```
+
+验证要测 **JS 文件**，不要只测首页 HTML（默认只压 text/html）：
+
+```bash
+curl -sI -H "Accept-Encoding: gzip" https://addchess.cn/assets/index-*.js | egrep -i 'content-encoding|content-length'
+# 应有 Content-Encoding: gzip，且不应再是 Content-Length: 226414
 ```
 
 验证 gzip 已生效：
