@@ -133,7 +133,7 @@ export function MultiplayerPanel() {
             ，再用两个浏览器窗口测试。
           </>
         ) : (
-          <>创建房间或输入房间号加入；两人到齐后，房主点「开始游戏」。</>
+          <>创建或加入房间；两人到齐后各自选边并点准备，双方准备后自动开始。</>
         )}
       </p>
 
@@ -149,19 +149,74 @@ export function MultiplayerPanel() {
             房间号：<strong className="room-id">{mp.roomId}</strong>
           </p>
           <p>
-            你的座位：
-            <strong>{mp.seat === "white" ? "白方（房主）" : "黑方"}</strong>
-          </p>
-          <p>
             已连接：<strong>{mp.playerCount}</strong> / 2 人
           </p>
+
+          <div className="seat-pick">
+            <p className="seat-pick-label">选择你的阵营</p>
+            <div className="seat-pick-buttons" role="group" aria-label="选择阵营">
+              <button
+                type="button"
+                className={
+                  mp.mySeatChoice === "white"
+                    ? "btn-seat active"
+                    : "btn-seat"
+                }
+                disabled={mp.opponentSeatChoice === "white"}
+                onClick={() => mp.chooseSeat("white")}
+              >
+                白方
+              </button>
+              <button
+                type="button"
+                className={
+                  mp.mySeatChoice === "black"
+                    ? "btn-seat active"
+                    : "btn-seat"
+                }
+                disabled={mp.opponentSeatChoice === "black"}
+                onClick={() => mp.chooseSeat("black")}
+              >
+                黑方
+              </button>
+            </div>
+            <p className="seat-pick-status">
+              {!mp.mySeatChoice
+                ? "请先选择白方或黑方"
+                : mp.playerCount < 2
+                  ? "等待对手加入…"
+                  : !mp.opponentSeatChoice
+                    ? "等待对手选边…"
+                    : !mp.seatsReady
+                      ? "双方不能选同一阵营"
+                      : mp.myReady && mp.opponentReady
+                        ? "双方已准备，即将开始…"
+                        : mp.myReady
+                          ? "已准备，等待对手…"
+                          : mp.opponentReady
+                            ? "对手已准备，请点击准备"
+                            : "选边完成，请点击准备"}
+            </p>
+            {mp.opponentSeatChoice ? (
+              <p className="seat-pick-opponent">
+                对手已选：
+                <strong>
+                  {mp.opponentSeatChoice === "white" ? "白方" : "黑方"}
+                </strong>
+                {mp.opponentReady ? (
+                  <span className="seat-pick-ready-tag"> · 已准备</span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+
           <button
             type="button"
-            className="btn-reset"
-            disabled={mp.playerCount < 2}
-            onClick={mp.startGame}
+            className={mp.myReady ? "btn-muted" : "btn-reset"}
+            disabled={!mp.canPressReady}
+            onClick={() => mp.setReady(!mp.myReady)}
           >
-            开始游戏
+            {mp.myReady ? "取消准备" : "准备"}
           </button>
           <button type="button" className="btn-muted" onClick={mp.leave}>
             离开房间

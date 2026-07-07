@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ClientMessage,
   GameStatus,
+  LobbyState,
   Move,
   PieceKind,
+  PlayerSlot,
   RoomSync,
   Seat,
   ServerMessage,
@@ -16,6 +18,7 @@ import {
   blackHasLegalTeleport,
   blackHighlightSquares,
   blackKingSetupHighlights,
+  canStartLobby,
   getVariantStatus,
   inCheck,
   isVariantTerminal,
@@ -62,11 +65,53 @@ function applySync(
 
 export type MultiplayerScreen = "lobby" | "game";
 
+const EMPTY_LOBBY: LobbyState = {
+  playerCount: 0,
+  hostSeatChoice: null,
+  guestSeatChoice: null,
+  hostReady: false,
+  guestReady: false,
+};
+
+function mySeatChoiceFromLobby(
+  slot: PlayerSlot | null,
+  lobby: LobbyState,
+): Seat | null {
+  if (!slot) return null;
+  return slot === "host" ? lobby.hostSeatChoice : lobby.guestSeatChoice;
+}
+
+function opponentSeatChoiceFromLobby(
+  slot: PlayerSlot | null,
+  lobby: LobbyState,
+): Seat | null {
+  if (!slot) return null;
+  return slot === "host" ? lobby.guestSeatChoice : lobby.hostSeatChoice;
+}
+
+function myReadyFromLobby(
+  slot: PlayerSlot | null,
+  lobby: LobbyState,
+): boolean {
+  if (!slot) return false;
+  return slot === "host" ? lobby.hostReady : lobby.guestReady;
+}
+
+function opponentReadyFromLobby(
+  slot: PlayerSlot | null,
+  lobby: LobbyState,
+): boolean {
+  if (!slot) return false;
+  return slot === "host" ? lobby.guestReady : lobby.hostReady;
+}
+
 export function useMultiplayer() {
   const wsRef = useRef<WebSocket | null>(null);
   const [screen, setScreen] = useState<MultiplayerScreen>("lobby");
   const [roomId, setRoomId] = useState("");
+  const [slot, setSlot] = useState<PlayerSlot | null>(null);
   const [seat, setSeat] = useState<Seat | null>(null);
+  const [lobby, setLobby] = useState<LobbyState>(EMPTY_LOBBY);
   const [playerCount, setPlayerCount] = useState(0);
   const [lobbyError, setLobbyError] = useState("");
   const [joinInput, setJoinInput] = useState("");
@@ -108,17 +153,25 @@ export function useMultiplayer() {
     switch (msg.type) {
       case "roomCreated":
         setRoomId(msg.roomId);
-        setSeat(msg.seat);
-        setPlayerCount(1);
+        setSlot(msg.slot);
+        setSeat(null);
+        setLobby(msg.lobby);
+        setPlayerCount(msg.lobby.playerCount);
         setLobbyError("");
         setConnected(true);
         break;
       case "joined":
         setRoomId(msg.roomId);
-        setSeat(msg.seat);
-        setPlayerCount(msg.playerCount);
+        setSlot(msg.slot);
+        setSeat(null);
+        setLobby(msg.lobby);
+        setPlayerCount(msg.lobby.playerCount);
         setLobbyError("");
         setConnected(true);
+        break;
+      case "lobbyUpdate":
+        setLobby(msg.lobby);
+        setPlayerCount(msg.lobby.playerCount);
         break;
       case "playerJoined":
         setPlayerCount(msg.playerCount);
@@ -130,17 +183,18 @@ export function useMultiplayer() {
       case "opponentLeft":
         setOpponentLeft(true);
         setScreen("lobby");
+        setSeat(null);
         setVariant(null);
         setAwaitingWhitePickKind(false);
         setPendingAddKind(null);
         setPendingUndoFrom(null);
         setPromotion(null);
         setSelected(null);
-        setPlayerCount(1);
         setActionError("");
         break;
       case "gameStarted":
         applySync(msg.sync, syncSetters);
+        setSeat(msg.seat);
         setScreen("game");
         setOpponentLeft(false);
         setLocalBlackStep("pick_action");
@@ -210,16 +264,28 @@ export function useMultiplayer() {
     connectWs({ type: "joinRoom", roomId: id });
   }, [connectWs, joinInput]);
 
-  const startGame = useCallback(() => {
-    send({ type: "startGame" });
-  }, [send]);
+  const setReady = useCallback(
+    (ready: boolean) => {
+      send({ type: "setReady", ready });
+    },
+    [send],
+  );
+
+  const chooseSeat = useCallback(
+    (side: Seat) => {
+      send({ type: "chooseSeat", seat: side });
+    },
+    [send],
+  );
 
   const leave = useCallback(() => {
     wsRef.current?.close();
     wsRef.current = null;
     setScreen("lobby");
     setRoomId("");
+    setSlot(null);
     setSeat(null);
+    setLobby(EMPTY_LOBBY);
     setPlayerCount(0);
     setVariant(null);
     setJoinInput("");
@@ -585,6 +651,13 @@ export function useMultiplayer() {
   const showWhitePickPanel =
     Boolean(variant && seat === "white" && awaitingWhitePickKind);
 
+  const mySeatChoice = mySeatChoiceFromLobby(slot, lobby);
+  const opponentSeatChoice = opponentSeatChoiceFromLobby(slot, lobby);
+  const myReady = myReadyFromLobby(slot, lobby);
+  const opponentReady = opponentReadyFromLobby(slot, lobby);
+  const seatsReady = canStartLobby(lobby);
+  const canPressReady = Boolean(mySeatChoice && playerCount >= 2);
+
   const canRequestUndo = Boolean(
     variant &&
       seat &&
@@ -645,7 +718,15 @@ export function useMultiplayer() {
   return {
     screen,
     roomId,
+    slot,
     seat,
+    mySeatChoice,
+    opponentSeatChoice,
+    myReady,
+    opponentReady,
+    seatsReady,
+    canPressReady,
+    lobby,
     playerCount,
     lobbyError,
     joinInput,
@@ -653,7 +734,8 @@ export function useMultiplayer() {
     connected,
     createRoom,
     joinRoom,
-    startGame,
+    chooseSeat,
+    setReady,
     leave: leaveWithConfirm,
     leaveForce: leave,
     opponentLeft,

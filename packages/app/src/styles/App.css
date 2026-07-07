@@ -356,6 +356,66 @@ body {
   letter-spacing: 0.08em;
 }
 
+.seat-pick {
+  margin: 0.5rem 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid #343b47;
+  border-bottom: 1px solid #343b47;
+}
+
+.seat-pick-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: #aeb6c5;
+}
+
+.seat-pick-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-seat {
+  flex: 1;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #4c566a;
+  background: #2e3440;
+  color: #d8dee9;
+}
+
+.btn-seat:hover:not(:disabled) {
+  background: #3b4252;
+}
+
+.btn-seat.active {
+  background: #434c5e;
+  border-color: #5e81ac;
+  color: #eceff4;
+}
+
+.btn-seat:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.seat-pick-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #8b95a8;
+}
+
+.seat-pick-opponent {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #9aa3b2;
+}
+
+.seat-pick-ready-tag {
+  color: #a3be8c;
+}
+
 .lobby-join-row {
   display: flex;
   gap: 0.5rem;

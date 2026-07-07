@@ -5,28 +5,36 @@ import {
   applyNormalMove,
   applyPlaceBlackKing,
   blackHasLegalAdd,
+  shouldAutoStartGame,
   createVariantInitial,
   legalBlackBoardMoves,
   legalWhiteMoves,
   syncFromVariant,
   whiteLegalPieceKinds,
   type ClientMessage,
+  type PlayerSlot,
   type Seat,
   type ServerMessage,
   type Square,
 } from "@addchess/core";
 import type { Room } from "./rooms.js";
 import {
-  attachPlayer,
+  attachSlot,
   clearUndoRequest,
   createRoom as newRoom,
   detachSocket,
+  finalizeSeatAssignments,
+  getPlayerSeat,
   getRoom,
   getSocketMeta,
+  lobbyState,
   playerCount,
   resetAddFlow,
+  resetRoomToLobby,
   restoreHistory,
   saveHistory,
+  setReady,
+  setSeatChoice,
 } from "./rooms.js";
 
 function send(ws: WebSocket, msg: ServerMessage): void {
@@ -36,9 +44,13 @@ function send(ws: WebSocket, msg: ServerMessage): void {
 }
 
 function broadcast(room: Room, msg: ServerMessage): void {
-  for (const ws of Object.values(room.players)) {
+  for (const ws of Object.values(room.slots)) {
     if (ws) send(ws, msg);
   }
+}
+
+function broadcastLobby(room: Room): void {
+  broadcast(room, { type: "lobbyUpdate", lobby: lobbyState(room) });
 }
 
 function pushSync(room: Room): void {
@@ -64,6 +76,10 @@ function requirePlaying(room: Room, ws: WebSocket): boolean {
     return false;
   }
   return true;
+}
+
+function opponentSlot(slot: PlayerSlot): PlayerSlot {
+  return slot === "host" ? "guest" : "host";
 }
 
 function applyMoveMatching(
@@ -108,12 +124,36 @@ function inAddFlow(room: Room): boolean {
   return room.awaitingWhitePickKind || room.pendingAddKind !== null;
 }
 
+function tryBeginGame(room: Room): void {
+  const lobby = lobbyState(room);
+  if (!shouldAutoStartGame(lobby)) return;
+  if (!finalizeSeatAssignments(room)) return;
+  room.phase = "playing";
+  room.variant = createVariantInitial();
+  room.history = [];
+  resetAddFlow(room);
+  clearUndoRequest(room);
+  const sync = syncFromVariant(room.variant, false, null, null);
+  for (const slot of ["host", "guest"] as const) {
+    const slotWs = room.slots[slot];
+    const seat = room.seatChoices[slot];
+    if (slotWs && seat) {
+      send(slotWs, { type: "gameStarted", seat, sync });
+    }
+  }
+}
+
 export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
   switch (msg.type) {
     case "createRoom": {
       const room = newRoom();
-      attachPlayer(room, "white", ws);
-      send(ws, { type: "roomCreated", roomId: room.id, seat: "white" });
+      attachSlot(room, "host", ws);
+      send(ws, {
+        type: "roomCreated",
+        roomId: room.id,
+        slot: "host",
+        lobby: lobbyState(room),
+      });
       return;
     }
 
@@ -131,59 +171,80 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
         reject(ws, "房间已满");
         return;
       }
-      if (!attachPlayer(room, "black", ws)) {
+      if (!attachSlot(room, "guest", ws)) {
         reject(ws, "无法加入房间");
         return;
       }
       send(ws, {
         type: "joined",
         roomId: room.id,
-        seat: "black",
-        playerCount: playerCount(room),
+        slot: "guest",
+        lobby: lobbyState(room),
       });
-      if (room.players.white) {
-        send(room.players.white, {
+      if (room.slots.host) {
+        send(room.slots.host, {
           type: "playerJoined",
           playerCount: playerCount(room),
         });
       }
+      broadcastLobby(room);
       return;
     }
 
-    case "startGame": {
+    case "chooseSeat": {
       const meta = getSocketMeta(ws);
       if (!meta) {
         reject(ws, "尚未加入房间");
         return;
       }
       const room = getRoom(meta.roomId);
-      if (!room) {
-        reject(ws, "房间不存在");
+      if (!room || room.phase !== "waiting") {
+        reject(ws, "当前不能选边");
+        return;
+      }
+      const other = opponentSlot(meta.slot);
+      if (room.seatChoices[other] === msg.seat) {
+        reject(ws, "对方已选择该边");
+        return;
+      }
+      setSeatChoice(room, meta.slot, msg.seat);
+      broadcastLobby(room);
+      return;
+    }
+
+    case "setReady": {
+      const meta = getSocketMeta(ws);
+      if (!meta) {
+        reject(ws, "尚未加入房间");
+        return;
+      }
+      const room = getRoom(meta.roomId);
+      if (!room || room.phase !== "waiting") {
+        reject(ws, "当前不能准备");
+        return;
+      }
+      if (!room.seatChoices[meta.slot]) {
+        reject(ws, "请先选择阵营");
         return;
       }
       if (playerCount(room) < 2) {
-        reject(ws, "需要两名玩家才能开始");
+        reject(ws, "等待对手加入");
         return;
       }
-      room.phase = "playing";
-      room.variant = createVariantInitial();
-      room.history = [];
-      resetAddFlow(room);
-      clearUndoRequest(room);
-      broadcast(room, {
-        type: "gameStarted",
-        sync: syncFromVariant(room.variant, false, null, null),
-      });
+      setReady(room, meta.slot, msg.ready);
+      broadcastLobby(room);
+      tryBeginGame(room);
       return;
     }
 
     case "placeKing": {
-      const meta = getSocketMeta(ws);
-      if (!meta || meta.seat !== "black") {
+      const seat = getPlayerSeat(ws);
+      if (!seat || seat !== "black") {
         reject(ws, "仅黑方可放置王");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       saveHistory(room);
       const next = applyPlaceBlackKing(room.variant!, msg.to);
@@ -200,14 +261,15 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "move": {
-      const meta = getSocketMeta(ws);
-      if (!meta) {
+      const seat = getPlayerSeat(ws);
+      if (!seat) {
         reject(ws, "尚未加入房间");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
-      if (room.variant!.sideToMove !== meta.seat) {
+      if (room.variant!.sideToMove !== seat) {
         reject(ws, "还没轮到你");
         return;
       }
@@ -228,12 +290,13 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "beginAdd": {
-      const meta = getSocketMeta(ws);
-      if (!meta || meta.seat !== "black") {
+      const seat = getPlayerSeat(ws);
+      if (!seat || seat !== "black") {
         reject(ws, "仅黑方可发起加子");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (room.variant!.sideToMove !== "black") {
         reject(ws, "还没轮到黑方");
@@ -255,12 +318,13 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "pickAddKind": {
-      const meta = getSocketMeta(ws);
-      if (!meta || meta.seat !== "white") {
+      const seat = getPlayerSeat(ws);
+      if (!seat || seat !== "white") {
         reject(ws, "仅白方可指定兵种");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (!room.awaitingWhitePickKind) {
         reject(ws, "当前不在选兵种阶段");
@@ -277,12 +341,13 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "addPiece": {
-      const meta = getSocketMeta(ws);
-      if (!meta || meta.seat !== "black") {
+      const seat = getPlayerSeat(ws);
+      if (!seat || seat !== "black") {
         reject(ws, "仅黑方可落子");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (!room.pendingAddKind) {
         reject(ws, "白方尚未指定兵种");
@@ -308,12 +373,13 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "teleport": {
-      const meta = getSocketMeta(ws);
-      if (!meta || meta.seat !== "black") {
+      const seat = getPlayerSeat(ws);
+      if (!seat || seat !== "black") {
         reject(ws, "仅黑方可空降");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (room.variant!.sideToMove !== "black") {
         reject(ws, "还没轮到黑方");
@@ -348,12 +414,13 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
     }
 
     case "requestUndo": {
-      const meta = getSocketMeta(ws);
-      if (!meta) {
+      const seat = getPlayerSeat(ws);
+      if (!seat) {
         reject(ws, "尚未加入房间");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (inAddFlow(room)) {
         reject(ws, "加子流程中不能悔棋");
@@ -367,32 +434,33 @@ export function handleClientMessage(ws: WebSocket, msg: ClientMessage): void {
         reject(ws, "没有可悔的步");
         return;
       }
-      if (room.variant!.sideToMove === meta.seat) {
+      if (room.variant!.sideToMove === seat) {
         reject(ws, "只能在对手思考时申请悔棋");
         return;
       }
-      room.pendingUndoFrom = meta.seat;
+      room.pendingUndoFrom = seat;
       pushSync(room);
       return;
     }
 
     case "respondUndo": {
-      const meta = getSocketMeta(ws);
-      if (!meta) {
+      const seat = getPlayerSeat(ws);
+      if (!seat) {
         reject(ws, "尚未加入房间");
         return;
       }
-      const room = getRoom(meta.roomId);
+      const meta = getSocketMeta(ws);
+      const room = meta ? getRoom(meta.roomId) : undefined;
       if (!room || !requirePlaying(room, ws)) return;
       if (!room.pendingUndoFrom) {
         reject(ws, "没有悔棋申请");
         return;
       }
-      if (room.variant!.sideToMove !== meta.seat) {
+      if (room.variant!.sideToMove !== seat) {
         reject(ws, "仅轮到走棋的一方可回应悔棋");
         return;
       }
-      if (room.pendingUndoFrom === meta.seat) {
+      if (room.pendingUndoFrom === seat) {
         reject(ws, "不能回应自己的悔棋申请");
         return;
       }
@@ -436,16 +504,17 @@ export function onSocketClose(ws: WebSocket): void {
   if (!remaining || playerCount(remaining) === 0) return;
 
   if (wasPlaying) {
-    remaining.phase = "waiting";
-    remaining.variant = null;
-    remaining.history = [];
-    resetAddFlow(remaining);
-    clearUndoRequest(remaining);
-    broadcast(remaining, { type: "opponentLeft", seat: leftSeat });
+    resetRoomToLobby(remaining);
+    broadcast(remaining, {
+      type: "opponentLeft",
+      seat: leftSeat ?? "white",
+    });
+    broadcastLobby(remaining);
   } else {
     broadcast(remaining, {
       type: "playerLeft",
       playerCount: playerCount(remaining),
     });
+    broadcastLobby(remaining);
   }
 }

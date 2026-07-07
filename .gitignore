@@ -7,3 +7,7 @@ coverage
 .vite
 **/dist
 deploy/config.env
+
+# Local-only docs for testers (not in repo)
+docs/*.docx
+tmp-gzip.js.gz
